@@ -36,7 +36,10 @@ export class TasksPanel {
       this.tasks = [];
     }
 
-    this.updateWebviewTasks();
+    // vscode.workspace.getConfiguration().update('vscode-task-manager.tasks', this.tasks, vscode.ConfigurationTarget.Global);
+    console.log('0');
+
+    this._panel.webview.postMessage({ command: 'init', tasks: this.tasks });
 
     // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
     // the panel or when the panel is closed programmatically)
@@ -51,7 +54,7 @@ export class TasksPanel {
 
   public updateWebviewTasks()
   {
-    this._panel.webview.postMessage({ type: 'update', tasks: this.tasks });
+    this._panel.webview.postMessage({ command: 'update', tasks: this.tasks });
   }
 
   public static render(extensionUri: Uri) {
@@ -151,18 +154,19 @@ export class TasksPanel {
           // are created within the webview context (i.e. inside media/main.js)
           case 'updateTasks':
             this.tasks.splice(0, this.tasks.length, ...message.tasks);
-            this.updateWebviewTasks();
+            // this.updateWebviewTasks();
             break;
           case 'deleteTask':
             var index = this.tasks.findIndex((o: TaskItem) => o.id == message.id)
             this.tasks.splice(index, 1);
-            this.updateWebviewTasks();
+            // this.updateWebviewTasks();
             break;
           case 'createTask':
             var item = new TaskItem();
             item.id = this.generateID();
+            item.status = "undone";
             this.tasks.push(item);
-            this.updateWebviewTasks();
+            // this.updateWebviewTasks();
             break;
         }
         fs.writeFileSync(this.tasksFilePath, JSON.stringify(this.tasks));

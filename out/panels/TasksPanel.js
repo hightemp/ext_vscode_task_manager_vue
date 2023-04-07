@@ -26,7 +26,9 @@ class TasksPanel {
         else {
             this.tasks = [];
         }
-        this.updateWebviewTasks();
+        // vscode.workspace.getConfiguration().update('vscode-task-manager.tasks', this.tasks, vscode.ConfigurationTarget.Global);
+        console.log('0');
+        this._panel.webview.postMessage({ command: 'init', tasks: this.tasks });
         // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
         // the panel or when the panel is closed programmatically)
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -36,7 +38,7 @@ class TasksPanel {
         this._setWebviewMessageListener(this._panel.webview);
     }
     updateWebviewTasks() {
-        this._panel.webview.postMessage({ type: 'update', tasks: this.tasks });
+        this._panel.webview.postMessage({ command: 'update', tasks: this.tasks });
     }
     static render(extensionUri) {
         if (TasksPanel.currentPanel) {
@@ -123,18 +125,19 @@ class TasksPanel {
                 // are created within the webview context (i.e. inside media/main.js)
                 case 'updateTasks':
                     this.tasks.splice(0, this.tasks.length, ...message.tasks);
-                    this.updateWebviewTasks();
+                    // this.updateWebviewTasks();
                     break;
                 case 'deleteTask':
                     var index = this.tasks.findIndex((o) => o.id == message.id);
                     this.tasks.splice(index, 1);
-                    this.updateWebviewTasks();
+                    // this.updateWebviewTasks();
                     break;
                 case 'createTask':
                     var item = new Tasks_1.TaskItem();
                     item.id = this.generateID();
+                    item.status = "undone";
                     this.tasks.push(item);
-                    this.updateWebviewTasks();
+                    // this.updateWebviewTasks();
                     break;
             }
             fs.writeFileSync(this.tasksFilePath, JSON.stringify(this.tasks));

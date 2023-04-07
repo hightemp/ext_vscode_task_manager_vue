@@ -2,32 +2,48 @@
 import { 
   provideVSCodeDesignSystem, 
   vsCodeButton, 
-  vsCodeCheckbox, 
   vsCodeTextField,
   vsCodeDropdown,
   vsCodeOption
 } from "@vscode/webview-ui-toolkit";
 import { vscode } from "./utilities/vscode";
 import { TaskItem } from "../../src/types/Tasks";
+import { ref, reactive, onMounted } from 'vue';
 
-var tasks: TaskItem[] = [];
+const state:any = vscode.getState() || { tasks: [] };
+console.log('1', { state });
+var tasks: any = ref(state.tasks); // TaskItem[]
+
+// console.log('2', state.data.get('vscode-task-manager.tasks'))
+// tasks.splice(0, tasks.length, ...state.data.get('vscode-task-manager.tasks'));
 
 window.addEventListener('message', event => {
-  if (event.data.type === 'update') {
-    tasks = event.data.tasks
-    console.log(tasks)
+  if (event.data.command === 'init') {
+    tasks.splice(0, tasks.length, ...event.data.tasks);
+    console.log('3', tasks)
   }
+  // if (event.data.type === 'update') {
+  //   // tasks = event.data.tasks
+  //   tasks.splice(0, tasks.length, ...event.data.tasks)
+  //   console.log(tasks)
+  // }
 });
 
 console.log(tasks)
 
+onMounted(() => {
+  console.log('mounted');
+})
+
 // In order to use the Webview UI Toolkit web components they
 // must be registered with the browser (i.e. webview) using the
 // syntax below.
-provideVSCodeDesignSystem().register(vsCodeButton());
-provideVSCodeDesignSystem().register(vsCodeTextField());
-provideVSCodeDesignSystem().register(vsCodeDropdown());
-provideVSCodeDesignSystem().register(vsCodeOption());
+provideVSCodeDesignSystem().register(
+  vsCodeButton(),
+  vsCodeTextField(),
+  vsCodeDropdown(),
+  vsCodeOption()
+);
 
 // To register more toolkit components, simply import the component
 // registration function and call it from within the register
@@ -43,66 +59,69 @@ provideVSCodeDesignSystem().register(vsCodeOption());
 //
 // provideVSCodeDesignSystem().register(allComponents);
 
+function updateTasks() {
+  state.tasks = [...tasks];
+  vscode.postMessage({
+    command: "updateTasks",
+    tasks: [...state.tasks]
+  });
+  vscode.setState(state);
+}
+
 function handleAddTaskClick() {
-  vscode.postMessage({
-    command: "createTask",
-  });
 }
 
-function handleStatusChangeClick(id: string, event: any) {
+function handleStatusChangeClick(index: number, event: any) {
   console.log(event)
-  // var index = tasks.findIndex((o: TaskItem) => o.id == id)
-  // tasks.splice(index, 1, );
-  vscode.postMessage({
-    command: "updateTasks",
-    tasks
-  });
+  updateTasks()
 }
 
-function handleTitleChangeClick(id: string, event: any) {
+function handleTitleChangeClick(index: number, event: any) {
   console.log(event)
-  vscode.postMessage({
-    command: "updateTasks",
-    tasks
-  });
+  updateTasks()
 }
 
-function handleDeleteClick(id: string, event: any) {
-  vscode.postMessage({
-    command: "deleteTask",
-    id
-  });
+function handleDeleteClick(index: number, event: any) {
+  tasks.splice(index, 1);
+  updateTasks()
 }
 </script>
 
 <template>
   <main>
-    <vscode-button @click="handleAddTaskClick">Сохранить</vscode-button>
+    <vscode-button @click="handleAddTaskClick">Create</vscode-button>
+    {{ tasks }}
     <table class="table table-striped">
-      <tr>
-        <td></td>
-        <td>Заголовок задачи</td>
-        <td></td>
-      </tr>
-      <tr v-for="task in tasks">
-        <td>
-          <vs-code-dropdown 
-            v-model="task.status"
-            @change="handleStatusChangeClick(task.id, $event)"
-          >
-            <vs-code-option></vs-code-option>
-          </vs-code-dropdown>
-        </td>
-        <td>
-          <vs-code-text-field 
-            v-model="task.title"
-            @change="handleTitleChangeClick(task.id, $event)"
-          ></vs-code-text-field>
-        </td>
-        <td>
-          <vscode-button @click="handleDeleteClick(task.id, $event)">Удалить</vscode-button>
-        </td>
-      </tr>
+      <thead>
+        <tr>
+          <td>Status</td>
+          <td>Title</td>
+          <td></td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(task, index) in tasks" :key="index">
+          <td>
+            <vscode-dropdown 
+              v-model="task.status"
+              @change="handleStatusChangeClick(index, $event)"
+            >
+              <vscode-option value="undone">undone</vscode-option>
+              <vscode-option value="doing">doing</vscode-option>
+              <vscode-option value="done">done</vscode-option>
+            </vscode-dropdown>
+          </td>
+          <td>
+            <vscode-text-field 
+              v-model="task.title"
+              @change="handleTitleChangeClick(index, $event)"
+            ></vscode-text-field>
+          </td>
+          <td>
+            <vscode-button @click="handleDeleteClick(index, $event)">Delete</vscode-button>
+          </td>
+        </tr>
+      </tbody>
     </table>
     
   </main>
@@ -260,8 +279,18 @@ main {
     vertical-align: top;
     border-color: var(--bs-table-border-color);
 }
-table {
+.table {
     caption-side: bottom;
     border-collapse: collapse;
+}
+.table-striped>tbody>tr:nth-of-type(odd)>* {
+    --bs-table-accent-bg: var(--bs-table-striped-bg);
+    color: var(--bs-table-striped-color);
+}
+.table>:not(caption)>*>* {
+    padding: 0.5rem 0.5rem;
+    background-color: var(--bs-table-bg);
+    border-bottom-width: var(--bs-border-width);
+    box-shadow: inset 0 0 0 9999px var(--bs-table-accent-bg);
 }
 </style>
