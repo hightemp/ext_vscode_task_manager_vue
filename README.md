@@ -1,6 +1,4 @@
-# ext_vscode_task_manager_vue
-
-Task manager for vscode.
+# Hello World (Vue)
 
 ## Run The Sample
 
